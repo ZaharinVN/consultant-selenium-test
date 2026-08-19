@@ -104,6 +104,22 @@ public class ConsultantHappyPathTest {
                 docPage::waitForReferenceNavigation
         );
 
+        Allure.step("Ожидаемый результат", () -> {
+            String expectedResult = """
+            Жёлтая стрелка должна указывать на первый абзац пункта 1
+            статьи 145 Налогового кодекса Российской Федерации.
+
+            Целевой абзац начинается с текста:
+            «1. Организации и индивидуальные предприниматели...»
+            """;
+
+            Allure.addAttachment(
+                    "Ожидаемый результат",
+                    "text/plain",
+                    expectedResult,
+                    ".txt"
+            );
+        });
 
         Allure.step(
                 "Скриншот пункта 1 статьи 145 после перехода по ссылке",

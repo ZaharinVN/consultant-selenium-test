@@ -8,5 +8,4 @@ public final class Config {
     public static final String SEARCH_QUERY = "Налоговый часть";
     public static final String TARGET_DOC_TITLE =
             "Налоговый кодекс Российской Федерации (часть вторая)";
-    public static final int TIMEOUT_SECONDS = 15;
 }
