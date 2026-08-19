@@ -58,4 +58,23 @@ public class ResultsPage {
                 + value.replace("'", "', \"'\", '")
                 + "')";
     }
+
+    // Возвращаем фактическое название документа в списке результатов поиска.
+    public String getDocumentTitleFromResults(String expectedTitle) {
+        String xpath = String.format(
+                "//a[contains(normalize-space(.), \"%s\")]",
+                expectedTitle
+        );
+
+        WebElement documentLink = wait.until(
+                ExpectedConditions.visibilityOfElementLocated(By.xpath(xpath))
+        );
+
+        return documentLink.getText()
+                .replace('\u00A0', ' ')
+                .replaceAll("\\s+", " ")
+                .trim();
+    }
+
+
 }

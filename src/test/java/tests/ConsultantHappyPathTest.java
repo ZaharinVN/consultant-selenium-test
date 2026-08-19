@@ -8,6 +8,7 @@ import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.chrome.ChromeDriver;
 import org.openqa.selenium.io.FileHandler;
 import org.openqa.selenium.support.ui.WebDriverWait;
+import org.testng.Assert;
 import org.testng.ITestResult;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
@@ -37,11 +38,13 @@ public class ConsultantHappyPathTest {
     private ResultsPage resultsPage;
     private DocumentPage docPage;
 
+    // 1. Открыть браузер Chrome на странице http://www.consultant.ru/cons/
     @BeforeMethod
     public void setUp() {
         driver = new ChromeDriver();
         driver.manage().window().maximize();
 
+        // Единое явное ожидание для всех Page Object.
         wait = new WebDriverWait(driver, TIMEOUT);
 
         homePage = new HomePage(driver, wait);
@@ -52,31 +55,46 @@ public class ConsultantHappyPathTest {
 
     @Test
     public void testConsultantHappyPath() {
+
+        // 1. Открыть браузер Chrome на странице http://www.consultant.ru/cons/
         Allure.step(
                 "Открытие главной страницы КонсультантПлюс",
                 homePage::open
         );
 
+        // 2. Перейти в Быстрый поиск
         Allure.step(
                 "Переход в Быстрый поиск",
                 homePage::goToQuickSearch
         );
 
+        // 3. Ввести «Налоговый часть» и нажать кнопку «Найти»
         Allure.step("Ввод запроса и поиск", () -> {
             searchPage.enterQuery(Config.SEARCH_QUERY);
             searchPage.clickFind();
             searchPage.waitForResults();
         });
 
+        // 4. Открыть документ и сверить название с результатами поиска
         Allure.step(
                 "Ожидание ссылки на часть вторую НК РФ",
                 () -> resultsPage.waitForDocumentLink(Config.TARGET_DOC_TITLE)
+        );
+
+        // Название нужно сохранить до перехода со страницы результатов.
+        String titleFromResults = Allure.step(
+                "Получение названия документа из результатов поиска",
+                () -> resultsPage.getDocumentTitleFromResults(
+                        Config.TARGET_DOC_TITLE
+                )
         );
 
         Allure.step(
                 "Открытие части второй НК РФ",
                 () -> {
                     resultsPage.openDocumentByTitle(Config.TARGET_DOC_TITLE);
+
+                    // Пауза для визуальной отрисовки динамического документа.
                     waitForVisualRendering();
                 }
         );
@@ -87,6 +105,38 @@ public class ConsultantHappyPathTest {
         );
 
         Allure.step(
+                "Проверка выбранного документа и поискового запроса",
+                () -> {
+                    String normalizedTitleFromResults = normalizeDocumentTitle(titleFromResults);
+
+                    Assert.assertTrue(
+                            normalizedTitleFromResults.startsWith(Config.TARGET_DOC_TITLE),
+                            "В результатах поиска найден неверный документ: " +
+                                    titleFromResults
+                    );
+
+                    String documentSearchQuery = docPage.getDocumentSearchQuery();
+
+                    Assert.assertEquals(
+                            documentSearchQuery,
+                            Config.SEARCH_QUERY,
+                            "В строке поиска документа отображается неверный запрос"
+                    );
+
+                    Allure.addAttachment(
+                            "Проверка выбранного документа и поискового запроса",
+                            "text/plain",
+                            "Полное название выбранного документа: " + titleFromResults + "\n" +
+                                    "Нормализованное название: " + normalizedTitleFromResults + "\n" +
+                                    "Ожидаемое начало названия: " + Config.TARGET_DOC_TITLE + "\n" +
+                                    "Запрос в строке поиска: " + documentSearchQuery,
+                            ".txt"
+                    );
+                }
+        );
+
+        // 5. В статье 145, пункте 3 нажать ссылку «абзаце первом пункта 1»
+        Allure.step(
                 "Поиск фразы «абзаце первом пункта 1» в документе",
                 () -> docPage.findTextInDocument("абзаце первом пункта 1")
         );
@@ -95,6 +145,8 @@ public class ConsultantHappyPathTest {
                 "Переход по ссылке «абзаце первом пункта 1»",
                 () -> {
                     docPage.clickParagraph1Reference();
+
+                    // Ожидаем отрисовку целевого абзаца и жёлтой стрелки.
                     waitForVisualRendering();
                 }
         );
@@ -104,14 +156,15 @@ public class ConsultantHappyPathTest {
                 docPage::waitForReferenceNavigation
         );
 
+        // Ожидаемый результат
         Allure.step("Ожидаемый результат", () -> {
             String expectedResult = """
-            Жёлтая стрелка должна указывать на первый абзац пункта 1
-            статьи 145 Налогового кодекса Российской Федерации.
-
-            Целевой абзац начинается с текста:
-            «1. Организации и индивидуальные предприниматели...»
-            """;
+                    Жёлтая стрелка должна указывать на первый абзац пункта 1
+                    статьи 145 Налогового кодекса Российской Федерации.
+                    
+                    Целевой абзац начинается с текста:
+                    «1. Организации и индивидуальные предприниматели...»
+                    """;
 
             Allure.addAttachment(
                     "Ожидаемый результат",
@@ -121,10 +174,13 @@ public class ConsultantHappyPathTest {
             );
         });
 
+        // 6. Выделить указанный абзац и вывести его в отчёт
         Allure.step(
                 "Скриншот пункта 1 статьи 145 после перехода по ссылке",
                 () -> {
+                    // Отдельная пауза делает вложение Allure визуально стабильным.
                     waitForVisualRendering();
+
                     byte[] screenshot = ((TakesScreenshot) driver)
                             .getScreenshotAs(OutputType.BYTES);
 
@@ -136,12 +192,13 @@ public class ConsultantHappyPathTest {
                     );
                 }
         );
-
     }
 
+    // 7. Закрыть браузер
     @AfterMethod(alwaysRun = true)
     public void tearDown(ITestResult result) {
         if (driver != null && !result.isSuccess()) {
+            // На ошибке прикладываем отдельный скриншот для диагностики.
             takeFailureScreenshot(result.getMethod().getMethodName());
         }
 
@@ -150,6 +207,7 @@ public class ConsultantHappyPathTest {
         }
     }
 
+    // Сохраняем скриншот ошибки в target/screenshots и прикладывает его к Allure-отчёту.
     private void takeFailureScreenshot(String testName) {
         try {
             File source = ((TakesScreenshot) driver)
@@ -188,6 +246,17 @@ public class ConsultantHappyPathTest {
         }
     }
 
+    private String normalizeDocumentTitle(String title) {
+        return title
+                .replace('\u00A0', ' ')
+                .replace("\"", "")
+                .replace("«", "")
+                .replace("»", "")
+                .replaceAll("\\s+", " ")
+                .trim();
+    }
+
+    // Даём динамическому интерфейсу КонсультантПлюс время на визуальную отрисовку.
     private void waitForVisualRendering() {
         try {
             Thread.sleep(3_000);

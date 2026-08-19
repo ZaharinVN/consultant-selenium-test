@@ -15,22 +15,37 @@ public class DocumentPage {
     private final WebDriver driver;
     private final WebDriverWait wait;
 
+    // Строка поиска внутри открытого нормативного документа.
     private final By documentSearchInput = By.xpath(
             "//input[contains(@class, 'x-search-box__input') " +
                     "or contains(@class, 'x-page-components-search-panel__filter')]"
     );
+
+    // Возвращаем текст, введённый во внутридокументную строку поиска.
+    public String getDocumentSearchQuery() {
+        return wait.until(
+                        ExpectedConditions.visibilityOfElementLocated(documentSearchInput)
+                ).getAttribute("value")
+                .replace('\u00A0', ' ')
+                .replaceAll("\\s+", " ")
+                .trim();
+    }
 
     public DocumentPage(WebDriver driver, WebDriverWait wait) {
         this.driver = driver;
         this.wait = wait;
     }
 
+    // 4. Открыть документ «Налоговый кодекс Российской Федерации (часть вторая)»
+    // Ожидаем появления поля внутридокументного поиска. Его видимость подтверждает, что страница документа открылась.
     public void waitForDocumentLoaded() {
-        wait.until(ExpectedConditions.visibilityOfElementLocated(
-                documentSearchInput
-        ));
+        wait.until(
+                ExpectedConditions.visibilityOfElementLocated(documentSearchInput)
+        );
     }
 
+    // 5. В статье 145, пункте 3 нажать ссылку «абзаце первом пункта 1»
+    // Выполняем поиск фразы во внутреннем поиске открытого документа.
     public void findTextInDocument(String text) {
         WebElement input = wait.until(
                 ExpectedConditions.elementToBeClickable(documentSearchInput)
@@ -39,12 +54,10 @@ public class DocumentPage {
         input.click();
         input.sendKeys(Keys.chord(Keys.CONTROL, "a"));
         input.sendKeys(text);
-
-        System.out.println("Текст в поле до Enter: " + input.getAttribute("value"));
-
         input.sendKeys(Keys.ENTER);
 
         try {
+            // КонсультантПлюс асинхронно обновляет документ после внутридокументного поиска.
             Thread.sleep(2_000);
         } catch (InterruptedException exception) {
             Thread.currentThread().interrupt();
@@ -55,6 +68,7 @@ public class DocumentPage {
         }
     }
 
+    // Находим ссылку «абзаце первом пункта 1» и открываем её URL. Ссылка может быть расположена в основном DOM либо во вложенном фрейме.
     public void clickParagraph1Reference() {
         driver.switchTo().defaultContent();
 
@@ -93,6 +107,7 @@ public class DocumentPage {
         driver.navigate().to(targetUrl);
     }
 
+    // Ищем целевую ссылку в текущем DOM-контексте и возвращаем её абсолютный URL.
     private String findTargetLinkUrlInCurrentContext() {
         return (String) ((JavascriptExecutor) driver).executeScript(
                 """
@@ -112,11 +127,11 @@ public class DocumentPage {
         );
     }
 
+    // Подтверждаем, что адрес страницы содержит параметры целевого фрагмента документа.
     public void waitForReferenceNavigation() {
         wait.until(webDriver ->
                 webDriver.getCurrentUrl().contains("dst=15434")
                         || webDriver.getCurrentUrl().contains("field=134")
         );
     }
-
 }
