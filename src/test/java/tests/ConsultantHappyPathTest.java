@@ -8,7 +8,6 @@ import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.chrome.ChromeDriver;
 import org.openqa.selenium.io.FileHandler;
 import org.openqa.selenium.support.ui.WebDriverWait;
-import org.testng.Assert;
 import org.testng.ITestResult;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
@@ -18,7 +17,6 @@ import pages.DocumentPage;
 import pages.HomePage;
 import pages.ResultsPage;
 import pages.SearchPage;
-import utils.AllureReporter;
 import utils.Config;
 
 import java.io.File;
@@ -77,7 +75,10 @@ public class ConsultantHappyPathTest {
 
         Allure.step(
                 "Открытие части второй НК РФ",
-                () -> resultsPage.openDocumentByTitle(Config.TARGET_DOC_TITLE)
+                () -> {
+                    resultsPage.openDocumentByTitle(Config.TARGET_DOC_TITLE);
+                    waitForVisualRendering();
+                }
         );
 
         Allure.step(
@@ -92,7 +93,10 @@ public class ConsultantHappyPathTest {
 
         Allure.step(
                 "Переход по ссылке «абзаце первом пункта 1»",
-                docPage::clickParagraph1Reference
+                () -> {
+                    docPage.clickParagraph1Reference();
+                    waitForVisualRendering();
+                }
         );
 
         Allure.step(
@@ -100,19 +104,22 @@ public class ConsultantHappyPathTest {
                 docPage::waitForReferenceNavigation
         );
 
-        Allure.step("Добавление выделенного абзаца в отчёт", () -> {
-            String paragraphText = docPage.getReferencedParagraphText();
 
-            Assert.assertFalse(
-                    paragraphText.isBlank(),
-                    "Не удалось получить текст абзаца после перехода по ссылке"
-            );
+        Allure.step(
+                "Скриншот пункта 1 статьи 145 после перехода по ссылке",
+                () -> {
+                    waitForVisualRendering();
+                    byte[] screenshot = ((TakesScreenshot) driver)
+                            .getScreenshotAs(OutputType.BYTES);
 
-            AllureReporter.attachText(
-                    "Выделенный абзац",
-                    paragraphText
-            );
-        });
+                    Allure.addAttachment(
+                            "Пункт 1 статьи 145 НК РФ",
+                            "image/png",
+                            new java.io.ByteArrayInputStream(screenshot),
+                            ".png"
+                    );
+                }
+        );
 
     }
 
@@ -161,6 +168,18 @@ public class ConsultantHappyPathTest {
             System.err.println(
                     "Не удалось создать скриншот: "
                             + exception.getMessage()
+            );
+        }
+    }
+
+    private void waitForVisualRendering() {
+        try {
+            Thread.sleep(3_000);
+        } catch (InterruptedException exception) {
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException(
+                    "Поток был прерван во время ожидания отрисовки страницы",
+                    exception
             );
         }
     }

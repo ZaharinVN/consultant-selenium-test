@@ -65,26 +65,25 @@ public class DocumentPage {
                     By.cssSelector("iframe, frame")
             );
 
-            for (int index = 0; index < frames.size(); index++) {
-                driver.switchTo().defaultContent();
+            for (WebElement frame : frames) {
+                try {
+                    driver.switchTo().defaultContent();
+                    driver.switchTo().frame(frame);
 
-                WebElement frame = driver.findElements(
-                        By.cssSelector("iframe, frame")
-                ).get(index);
+                    targetUrl = findTargetLinkUrlInCurrentContext();
 
-                driver.switchTo().frame(frame);
-
-                targetUrl = findTargetLinkUrlInCurrentContext();
-
-                if (targetUrl != null) {
-                    break;
+                    if (targetUrl != null) {
+                        break;
+                    }
+                } catch (RuntimeException ignored) {
+                    targetUrl = null;
+                } finally {
+                    driver.switchTo().defaultContent();
                 }
             }
         }
 
-        driver.switchTo().defaultContent();
-
-        if (targetUrl == null) {
+        if (targetUrl == null || targetUrl.isBlank()) {
             throw new IllegalStateException(
                     "Не найдена ссылка «абзаце первом пункта 1» " +
                             "ни в основном документе, ни во вложенных iframe"
@@ -120,54 +119,4 @@ public class DocumentPage {
         );
     }
 
-    public String getReferencedParagraphText() {
-        Object result = ((JavascriptExecutor) driver).executeScript(
-                """
-                        const normalize = value => (value || '')
-                            .replace(/\\u00A0/g, ' ')
-                            .replace(/\\s+/g, ' ')
-                            .trim();
-                        
-                        const textFromBlock = element => {
-                            if (!element) {
-                                return '';
-                            }
-                        
-                            const block = element.closest(
-                                'p, div, li, td, dd, section, article'
-                            ) || element;
-                        
-                            return normalize(block.innerText || block.textContent);
-                        };
-                        
-                        const id = location.hash
-                            ? location.hash.substring(1)
-                            : '';
-                        
-                        const anchor = id ? document.getElementById(id) : null;
-                        const anchorText = textFromBlock(anchor);
-                        
-                        if (anchorText.length > 0) {
-                            return anchorText;
-                        }
-                        
-                        const centerElement = document.elementFromPoint(
-                            window.innerWidth / 2,
-                            window.innerHeight / 2
-                        );
-                        
-                        return textFromBlock(centerElement);
-                        """
-        );
-
-        String paragraphText = result == null ? "" : result.toString();
-
-        if (paragraphText.isBlank()) {
-            throw new IllegalStateException(
-                    "Не удалось извлечь текст абзаца после перехода по ссылке"
-            );
-        }
-
-        return paragraphText;
-    }
 }

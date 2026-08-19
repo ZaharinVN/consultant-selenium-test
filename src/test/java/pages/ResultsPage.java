@@ -1,10 +1,10 @@
-package pages; // Укажи пакет страницы
+package pages;
 
-import org.openqa.selenium.By; // Подключаем локатор
-import org.openqa.selenium.WebDriver; // Подключаем управление браузером
-import org.openqa.selenium.WebElement; // Подключаем веб-элемент
-import org.openqa.selenium.support.ui.ExpectedConditions; // Подключаем ожидаемые условия
-import org.openqa.selenium.support.ui.WebDriverWait; // Подключаем явные ожидания
+import org.openqa.selenium.By;
+import org.openqa.selenium.WebDriver;
+import org.openqa.selenium.WebElement;
+import org.openqa.selenium.support.ui.ExpectedConditions;
+import org.openqa.selenium.support.ui.WebDriverWait;
 
 import java.util.Set;
 
